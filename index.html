@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>Neon Asteroids</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <main id="app">
+    <canvas id="game" aria-label="Asteroids game"></canvas>
+    <div id="overlay" class="overlay">
+      <div class="panel">
+        <h1>Neon Asteroids</h1>
+        <p class="muted">Aim with mouse. Drift with inertia. Wrap around the screen.</p>
+        <div class="cols">
+          <div>
+            <h2>Mouse + Keyboard</h2>
+            <ul>
+              <li>Move mouse: aim</li>
+              <li>Left click: shoot</li>
+              <li>Right click or Space: thrust</li>
+              <li>P or Esc: pause</li>
+              <li>F: fullscreen</li>
+            </ul>
+          </div>
+          <div>
+            <h2>Gamepad</h2>
+            <ul>
+              <li>Left stick: aim direction</li>
+              <li>RT (or A/X): shoot</li>
+              <li>LT (or B/Circle): thrust</li>
+              <li>Start: pause</li>
+            </ul>
+          </div>
+          <div>
+            <h2>Keyboard Only</h2>
+            <ul>
+              <li>W/Up: thrust</li>
+              <li>A/D or Left/Right: rotate</li>
+              <li>Space: shoot</li>
+            </ul>
+          </div>
+        </div>
+        <button id="start-btn" class="primary">Start</button>
+        <p class="muted small" id="pad-hint">Controller: not connected</p>
+      </div>
+    </div>
+    <div id="hud" class="hud" aria-hidden="true">
+      <div class="hud-left">
+        <div class="hud-row"><span class="label">Score</span> <span id="score">0</span></div>
+        <div class="hud-row"><span class="label" style="color:#d278ff">Combo</span> <span id="combo" style="color:#d278ff"></span></div>
+        <div class="hud-row"><span class="label">Level</span> <span id="level">1</span></div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-row"><span class="label">Lives</span> <span id="lives">3</span></div>
+        <div class="hud-row"><span class="label" style="color:#ff4400">Bombs</span> <span id="bombs"
+            style="color:#ff4400">0</span> <span style="font-size:10px;color:#888">[B]</span></div>
+        <div class="hud-row"><span class="label">Input</span> <span id="scheme">Mouse</span></div>
+      </div>
+    </div>
+    <div id="pause" class="pause hidden" aria-hidden="true">
+      <div class="panel">
+        <h2>Paused</h2>
+        <p class="muted">Press P / Esc (or Start) to resume.</p>
+        <div class="mapping">
+          <h3>Gamepad Mapping</h3>
+          <pre id="mapping"></pre>
+        </div>
+        <button id="resume-btn" class="primary">Resume</button>
+        <button id="restart-btn" class="ghost">Restart</button>
+      </div>
+    </div>
+    <div id="gameover" class="pause hidden" aria-hidden="true">
+      <div class="panel">
+        <h2>Game Over</h2>
+        <p class="muted">Final score: <span id="final-score">0</span></p>
+        <button id="restart-btn-2" class="primary">Restart</button>
+      </div>
+    </div>
+
+    <!-- Virtual joystick overlay (touch devices only, managed by JS) -->
+    <div id="joystick-overlay" class="joystick-overlay" aria-hidden="true">
+      <div id="joystick-base" class="joystick-base"></div>
+      <div id="joystick-knob" class="joystick-knob"></div>
+    </div>
+
+    <!-- Fullscreen prompt for iOS (dismissed via JS) -->
+    <div id="fs-prompt" class="fs-prompt hidden" aria-hidden="true">
+      <span>For fullscreen: tap <strong>Share ↗</strong> then <strong>Add to Home Screen</strong></span>
+      <button id="fs-prompt-dismiss" class="fs-prompt-btn">✕</button>
+    </div>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>

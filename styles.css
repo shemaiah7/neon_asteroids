@@ -1,0 +1,247 @@
+:root {
+  --bg: #070714;
+  --panel: rgba(10, 10, 24, 0.78);
+  --border: rgba(120, 190, 255, 0.28);
+  --text: rgba(235, 245, 255, 0.92);
+  --muted: rgba(235, 245, 255, 0.72);
+  --neon: rgba(80, 200, 255, 1);
+  --neon2: rgba(210, 120, 255, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas#game {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.overlay,
+.pause {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(1200px 800px at 50% 40%, rgba(60, 120, 255, 0.12), rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(2px);
+}
+
+.panel {
+  width: min(980px, 96vw);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+  background: var(--panel);
+  box-shadow: 0 0 40px rgba(50, 160, 255, 0.12);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+
+p {
+  margin: 8px 0 12px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+ul {
+  margin: 10px 0 12px;
+  padding-left: 18px;
+}
+
+li {
+  margin: 6px 0;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 650;
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(30, 50, 90, 0.35);
+}
+
+button.primary {
+  border-color: rgba(120, 220, 255, 0.5);
+  background: linear-gradient(90deg, rgba(35, 120, 210, 0.72), rgba(90, 70, 210, 0.7));
+  box-shadow: 0 0 18px rgba(80, 200, 255, 0.18);
+}
+
+button.ghost {
+  background: rgba(30, 50, 90, 0.18);
+}
+
+button:focus-visible {
+  outline: 2px solid rgba(120, 220, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-size: 14px;
+  text-shadow: 0 0 10px rgba(80, 200, 255, 0.25);
+}
+
+.hud-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.label {
+  color: rgba(235, 245, 255, 0.68);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.hud-left,
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hud-right {
+  align-items: flex-end;
+}
+
+.hidden {
+  display: none;
+}
+
+.mapping pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 190, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
+  overflow: auto;
+  max-height: 220px;
+}
+
+@media (max-width: 860px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Virtual joystick overlay — hidden until touch activates it */
+.joystick-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.joystick-overlay.visible {
+  opacity: 1;
+}
+
+.joystick-base {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  margin-left: -60px;
+  margin-top: -60px;
+  border-radius: 50%;
+  border: 2px solid rgba(80, 200, 255, 0.3);
+  background: rgba(20, 40, 80, 0.18);
+  box-shadow: 0 0 24px rgba(80, 200, 255, 0.08);
+  pointer-events: none;
+}
+
+.joystick-knob {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  margin-left: -24px;
+  margin-top: -24px;
+  border-radius: 50%;
+  border: 2px solid rgba(80, 200, 255, 0.6);
+  background: rgba(50, 140, 255, 0.35);
+  box-shadow: 0 0 18px rgba(80, 200, 255, 0.25), inset 0 0 10px rgba(80, 200, 255, 0.12);
+  pointer-events: none;
+}
+
+/* Fullscreen prompt for iOS */
+.fs-prompt {
+  position: fixed;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  z-index: 300;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 0 20px rgba(50, 160, 255, 0.12);
+  white-space: nowrap;
+}
+
+.fs-prompt-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}

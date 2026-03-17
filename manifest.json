@@ -1,0 +1,22 @@
+{
+  "name": "Neon Asteroids",
+  "short_name": "Asteroids",
+  "description": "A neon-styled asteroids game",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#070714",
+  "theme_color": "#070714",
+  "icons": [
+    {
+      "src": "./assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
