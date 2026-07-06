@@ -365,22 +365,36 @@ function updateBulletMesh(mesh, bullet) {
 }
 
 function createParticleMesh(particle) {
-  const mesh = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 8),
-    neonFillMaterial(0xffffff, 0.9),
+  const group = new THREE.Group();
+  const glow = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 14),
+    neonFillMaterial(0xffffff, 0.4),
   );
-  mesh.userData.source = particle;
-  return mesh;
+  const core = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 10),
+    neonFillMaterial(0xffffff, 1),
+  );
+  group.add(glow);
+  group.add(core);
+  group.userData = { glow, core, source: particle };
+  return group;
 }
 
 function updateParticleMesh(mesh, particle) {
   const t = Math.max(0, particle.life / particle.maxLife);
+  const fade = 0.95 * t;
   const { color, opacity } = parseRgba(particle.color);
-  mesh.material.color.setHex(color);
-  mesh.material.opacity = 0.9 * t * opacity;
-  const size = particle.size * (0.6 + 0.6 * (1 - t));
-  mesh.position.set(particle.pos.x, particle.pos.y, 1.85);
-  mesh.scale.set(size, size, 1);
+  const coreSize = particle.size * (0.7 + 0.8 * (1 - t));
+  const glowSize = coreSize * 2.8;
+
+  mesh.userData.core.material.color.setHex(color);
+  mesh.userData.core.material.opacity = fade * opacity;
+  mesh.userData.glow.material.color.setHex(color);
+  mesh.userData.glow.material.opacity = fade * opacity * 0.5;
+
+  mesh.position.set(particle.pos.x, particle.pos.y, 2.6);
+  mesh.userData.core.scale.set(coreSize, coreSize, 1);
+  mesh.userData.glow.scale.set(glowSize, glowSize, 1);
 }
 
 function buildBigEnemyShape(r) {
@@ -629,7 +643,7 @@ export class World3D {
 
   _initPostProcessing() {
     const renderPass = new RenderPass(this.scene, this.camera);
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.38, 0.12);
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.42, 0.06);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(renderPass);
     this.composer.addPass(this.bloomPass);

@@ -560,7 +560,7 @@ export class Game {
           vx: Math.cos(a) * sp + rand(-40, 40),
           vy: Math.sin(a) * sp + rand(-40, 40),
           life: rand(0.35, 0.9),
-          size: rand(1.6, 3.6),
+          size: rand(2.2, 4.8),
           color: baseColor,
         }),
       );
