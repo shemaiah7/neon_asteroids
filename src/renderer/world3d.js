@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { rand, TAU } from "../util.js";
+import { clamp, rand, TAU } from "../util.js";
 
 const NEBULA_VERTEX = `
   varying vec2 vUv;
@@ -459,6 +459,113 @@ function updateEnemyMesh(mesh, enemy, time) {
   mesh.userData.outline.material.opacity = 0.55 + pulse * 0.25;
 }
 
+function octagonShape(r, rotation = 0) {
+  const shape = new THREE.Shape();
+  for (let i = 0; i < 8; i++) {
+    const a = (TAU / 8) * i + rotation;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  return shape;
+}
+
+function createBossMesh(boss) {
+  const r = boss.r;
+  const bodyGroup = new THREE.Group();
+
+  const outerShape = octagonShape(r, 0);
+  const outerFill = new THREE.Mesh(
+    new THREE.ShapeGeometry(outerShape),
+    neonFillMaterial(0x1e0014, 0.8),
+  );
+  const outerPts = outerShape.getPoints(8).flatMap((p) => [p.x, p.y, 0]);
+  outerPts.push(outerPts[0], outerPts[1], outerPts[2]);
+  const outerOutline = new THREE.Line(
+    new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(outerPts, 3)),
+    neonLineMaterial(0xff3399, 1),
+  );
+
+  const innerShape = octagonShape(r * 0.5, TAU / 16);
+  const innerPts = innerShape.getPoints(8).flatMap((p) => [p.x, p.y, 0]);
+  innerPts.push(innerPts[0], innerPts[1], innerPts[2]);
+  const innerOutline = new THREE.Line(
+    new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(innerPts, 3)),
+    neonLineMaterial(0xff3399, 0.85),
+  );
+
+  bodyGroup.add(outerFill);
+  bodyGroup.add(outerOutline);
+  bodyGroup.add(innerOutline);
+
+  const barW = 80;
+  const barH = 6;
+  const barY = r + 15;
+  const barBg = new THREE.Mesh(
+    new THREE.PlaneGeometry(barW, barH),
+    neonFillMaterial(0xff0000, 0.5),
+  );
+  const barFill = new THREE.Mesh(
+    new THREE.PlaneGeometry(barW, barH),
+    neonFillMaterial(0x00ff00, 0.8),
+  );
+  const barOutline = new THREE.Line(
+    new THREE.BufferGeometry().setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(
+        [-barW / 2, barY - barH / 2, 0, barW / 2, barY - barH / 2, 0, barW / 2, barY + barH / 2, 0, -barW / 2, barY + barH / 2, 0, -barW / 2, barY - barH / 2, 0],
+        3,
+      ),
+    ),
+    neonLineMaterial(0xffffff, 0.5),
+  );
+
+  barBg.position.set(0, barY, 0.02);
+  barFill.position.set(-barW / 2, barY, 0.03);
+
+  const hpGroup = new THREE.Group();
+  hpGroup.add(barBg);
+  hpGroup.add(barFill);
+  hpGroup.add(barOutline);
+
+  const root = new THREE.Group();
+  root.add(bodyGroup);
+  root.add(hpGroup);
+  root.userData = {
+    bodyGroup,
+    outerFill,
+    outerOutline,
+    innerOutline,
+    barFill,
+    source: boss,
+    barW,
+    barY,
+  };
+  return root;
+}
+
+function updateBossMesh(mesh, boss) {
+  mesh.position.set(boss.pos.x, boss.pos.y, 1.1);
+  mesh.userData.bodyGroup.rotation.z = boss.angle;
+
+  const isFlashing = boss.flashTimer > 0;
+  const phase = boss.phase;
+  const phaseColor = phase === 3 ? 0xff1144 : phase === 2 ? 0xff55aa : 0xff3399;
+
+  mesh.userData.outerFill.material.color.setHex(isFlashing ? 0xffffff : 0x1e0014);
+  mesh.userData.outerOutline.material.color.setHex(isFlashing ? 0xffffff : phaseColor);
+  mesh.userData.innerOutline.material.color.setHex(isFlashing ? 0xffffff : phaseColor);
+
+  const hpPct = clamp(boss.life / boss.maxLife, 0, 1);
+  const barW = mesh.userData.barW;
+  const barY = mesh.userData.barY;
+  mesh.userData.barFill.scale.set(hpPct, 1, 1);
+  mesh.userData.barFill.position.set(-barW / 2 + (barW * hpPct) / 2, barY, 0.03);
+  mesh.userData.barFill.material.color.setHex(phase === 3 ? 0xff3c3c : 0x00ff00);
+}
+
 export class World3D {
   constructor({ canvas, lowQuality = false }) {
     this.canvas = canvas;
@@ -499,6 +606,7 @@ export class World3D {
     this.enemyMeshes = [];
     this.bulletMeshes = [];
     this.particleMeshes = [];
+    this.bossMeshes = [];
     this.shipGroup = createShipGroup();
     this.worldGroup.add(this.shipGroup);
     this.composer = null;
@@ -660,6 +768,16 @@ export class World3D {
     );
   }
 
+  _syncBosses(bosses) {
+    syncEntityPool(
+      this.bossMeshes,
+      bosses,
+      this.worldGroup,
+      createBossMesh,
+      updateBossMesh,
+    );
+  }
+
   _syncShip(ship) {
     const {
       hullFill,
@@ -713,6 +831,7 @@ export class World3D {
     bullets = [],
     enemies = [],
     particles = [],
+    bosses = [],
   }) {
     if (!this.enabled) return;
     if (w !== this.bounds.w || h !== this.bounds.h) this.resize(w, h);
@@ -727,6 +846,7 @@ export class World3D {
     this._syncEnemies(enemies);
     this._syncBullets(bullets);
     this._syncParticles(particles);
+    this._syncBosses(bosses);
     if (ship) this._syncShip(ship);
 
     const shake = trauma * trauma * 3;

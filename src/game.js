@@ -137,6 +137,7 @@ export class Game {
       bullets: this.bullets,
       enemies: this.enemies,
       particles: this.particles,
+      bosses: this.bosses,
     };
   }
 
@@ -1180,10 +1181,10 @@ export class Game {
     if (!this.webglBackground) {
       for (const a of this.asteroids) a.draw(ctx);
       for (const e of this.enemies) e.draw(ctx);
+      for (const boss of this.bosses) boss.draw(ctx);
       for (const b of this.bullets) b.draw(ctx);
       this.ship.draw(ctx);
       for (const p of this.particles) p.draw(ctx);
     }
-    for (const boss of this.bosses) boss.draw(ctx);
   }
 }
