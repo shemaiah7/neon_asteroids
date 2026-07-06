@@ -29,6 +29,8 @@ export class Enemy {
     }
 
     update(dt, bounds, player, bulletsList) {
+        this.animTime += dt;
+
         if (this.leaving) {
             this.pos.x += this.vel.x * dt * 2.5;
             this.pos.y += this.vel.y * dt * 2.5;
@@ -157,8 +159,7 @@ export class Enemy {
         }));
     }
 
-    draw(ctx, dt) {
-        this.animTime += (dt || 1/60);
+    draw(ctx) {
         const t = this.animTime;
         const pulse = Math.sin(t * 3 + this.pulsePhase) * 0.5 + 0.5;
         const fastPulse = Math.sin(t * 8) * 0.5 + 0.5;
