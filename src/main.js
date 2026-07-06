@@ -1,5 +1,5 @@
 import { Game } from "./game.js";
-import { Background3D } from "./renderer/background3d.js";
+import { World3D } from "./renderer/world3d.js";
 
 const canvas = document.querySelector("#game");
 const bgCanvas = document.querySelector("#bg-webgl");
@@ -50,16 +50,16 @@ function resizeCanvas() {
   game.resize(w, h);
 }
 
-const background3d = bgCanvas
-  ? new Background3D({ canvas: bgCanvas, lowQuality: _isTouchDevice })
+const world3d = bgCanvas
+  ? new World3D({ canvas: bgCanvas, lowQuality: _isTouchDevice })
   : null;
 
 const game = new Game({
   canvas,
   ui,
-  webglBackground: !!background3d?.enabled,
+  webglBackground: !!world3d?.enabled,
 });
-if (background3d?.enabled) game.attachBackground3d(background3d);
+if (world3d?.enabled) game.attachBackground3d(world3d);
 
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);

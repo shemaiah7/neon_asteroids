@@ -132,6 +132,8 @@ export class Game {
       trauma: this.trauma,
       vel: this.ship.vel,
       dt,
+      ship: this.ship,
+      asteroids: this.asteroids,
     };
   }
 
@@ -1172,11 +1174,13 @@ export class Game {
       ctx.restore();
     }
 
-    for (const a of this.asteroids) a.draw(ctx);
+    if (!this.webglBackground) {
+      for (const a of this.asteroids) a.draw(ctx);
+    }
     for (const e of this.enemies) e.draw(ctx);
     for (const boss of this.bosses) boss.draw(ctx);
     for (const b of this.bullets) b.draw(ctx);
-    this.ship.draw(ctx);
+    if (!this.webglBackground) this.ship.draw(ctx);
     for (const p of this.particles) p.draw(ctx);
   }
 }
