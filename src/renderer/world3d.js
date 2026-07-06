@@ -20,11 +20,11 @@ const NEBULA_FRAGMENT = `
     vec2 center = vec2(0.5, 0.42);
     float d = distance(uv, center);
     float pulse = 0.5 + 0.5 * sin(uTime * 0.35);
-    float core = smoothstep(0.72, 0.0, d) * (0.16 + pulse * 0.06);
-    float violet = smoothstep(0.95, 0.25, d) * 0.07;
-    vec3 col = vec3(0.02, 0.03, 0.08);
-    col += vec3(0.12, 0.28, 0.55) * core;
-    col += vec3(0.28, 0.12, 0.45) * violet;
+    float core = smoothstep(0.78, 0.0, d) * (0.38 + pulse * 0.12);
+    float violet = smoothstep(1.0, 0.2, d) * 0.18;
+    vec3 col = vec3(0.03, 0.04, 0.11);
+    col += vec3(0.18, 0.38, 0.72) * core;
+    col += vec3(0.42, 0.16, 0.62) * violet;
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -102,7 +102,7 @@ function createAsteroidMesh(asteroid) {
     new THREE.MeshBasicMaterial({
       color: fillColor,
       transparent: true,
-      opacity: isExplosive ? 0.3 : 0.14,
+      opacity: isExplosive ? 0.45 : 0.28,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),
@@ -112,7 +112,7 @@ function createAsteroidMesh(asteroid) {
     new THREE.LineBasicMaterial({
       color: strokeColor,
       transparent: true,
-      opacity: isExplosive ? 0.8 : 0.55,
+      opacity: isExplosive ? 1 : 0.9,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),
@@ -601,7 +601,9 @@ export class World3D {
         alpha: false,
         powerPreference: lowQuality ? "low-power" : "high-performance",
       });
-      this.renderer.setPixelRatio(1);
+      const dpr = Math.min(lowQuality ? 1 : 2, window.devicePixelRatio || 1);
+      this.renderer.setPixelRatio(dpr);
+      this.renderer.setClearColor(0x070714, 1);
       this.enabled = true;
     } catch {
       return;
@@ -659,7 +661,7 @@ export class World3D {
 
   _initPostProcessing() {
     const renderPass = new RenderPass(this.scene, this.camera);
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.42, 0.06);
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.1, 0.55, 0.0);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(renderPass);
     this.composer.addPass(this.bloomPass);
@@ -694,7 +696,7 @@ export class World3D {
     this.starLayers.length = 0;
 
     const area = w * h;
-    const density = this.lowQuality ? 1 / 42000 : 1 / 28000;
+    const density = this.lowQuality ? 1 / 14000 : 1 / 8000;
     const total = Math.floor(area * density);
 
     this.nebula = new THREE.Mesh(
@@ -711,14 +713,14 @@ export class World3D {
 
     const layers = this.lowQuality
       ? [
-          { share: 0.55, z: 1, size: 1.4, opacity: 0.35, color: 0x7ab8ff },
-          { share: 0.3, z: 2, size: 1.8, opacity: 0.5, color: 0x9ad0ff },
-          { share: 0.15, z: 3, size: 2.4, opacity: 0.65, color: 0xc8e8ff },
+          { share: 0.55, z: 1, size: 2.2, opacity: 0.55, color: 0x9ac8ff },
+          { share: 0.3, z: 2, size: 3.0, opacity: 0.7, color: 0xb8e0ff },
+          { share: 0.15, z: 3, size: 4.0, opacity: 0.85, color: 0xe8f8ff },
         ]
       : [
-          { share: 0.5, z: 1, size: 1.2, opacity: 0.3, color: 0x6aa8ff },
-          { share: 0.32, z: 2, size: 1.7, opacity: 0.48, color: 0x8cc8ff },
-          { share: 0.18, z: 3, size: 2.6, opacity: 0.72, color: 0xd0f0ff },
+          { share: 0.5, z: 1, size: 2.0, opacity: 0.5, color: 0x8ac0ff },
+          { share: 0.32, z: 2, size: 3.2, opacity: 0.72, color: 0xa8d8ff },
+          { share: 0.18, z: 3, size: 4.8, opacity: 0.95, color: 0xf0fcff },
         ];
 
     for (const layer of layers) {

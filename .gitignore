@@ -1,5 +1,6 @@
 output/
 node_modules/
+vendor/
 .DS_Store
 .cf-deploy/
 

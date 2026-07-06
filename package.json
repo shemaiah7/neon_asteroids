@@ -4,10 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "postinstall": "npm run vendor:three",
     "test": "echo \"Error: no test specified\" && exit 1",
     "smoke:explosive-pierce-restart": "node scripts/playwright_smoke_explosive_pierce_restart.mjs --url http://127.0.0.1:5173",
     "cf:login": "npx wrangler whoami || npx wrangler login",
-    "deploy:cloudflare": "./scripts/deploy_cloudflare_pages.sh"
+    "deploy:cloudflare": "./scripts/deploy_cloudflare_pages.sh",
+    "vendor:three": "./scripts/copy_three_vendor.sh"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +18,7 @@
   "dependencies": {
     "play-sound": "^1.1.6",
     "playwright": "^1.61.0",
-    "serve": "^14.2.5"
+    "serve": "^14.2.5",
+    "three": "^0.172.0"
   }
 }

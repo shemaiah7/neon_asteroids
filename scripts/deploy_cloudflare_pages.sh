@@ -9,6 +9,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo "Preparing Cloudflare Pages deploy directory: $DEPLOY_DIR"
+./scripts/copy_three_vendor.sh
 mkdir -p "$DEPLOY_DIR"
 
 rsync -av --delete \

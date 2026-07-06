@@ -43,10 +43,7 @@ function resizeCanvas() {
   const h = Math.max(1, Math.floor(rect.height * dpr));
   canvas.width = w;
   canvas.height = h;
-  if (bgCanvas) {
-    bgCanvas.width = w;
-    bgCanvas.height = h;
-  }
+  // Never set bgCanvas.width/height — that destroys the WebGL context.
   game.resize(w, h);
 }
 
