@@ -139,6 +139,7 @@ export class Game {
       particles: this.particles,
       bosses: this.bosses,
       shockwaveTimer: this.shockwaveTimer,
+      mode: this.mode,
     };
   }
 
@@ -1106,7 +1107,7 @@ export class Game {
     this._drawWorld(ctx);
     ctx.restore();
 
-    if (this.mode === "paused") {
+    if (this.mode === "paused" && !this.webglBackground) {
       ctx.save();
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = "rgba(0,0,0,0.28)";

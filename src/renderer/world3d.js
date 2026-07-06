@@ -636,6 +636,22 @@ export class World3D {
     );
     this.shockwaveMesh.visible = false;
     this.worldGroup.add(this.shockwaveMesh);
+
+    this.overlayGroup = new THREE.Group();
+    this.pauseOverlayMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+      }),
+    );
+    this.pauseOverlayMesh.visible = false;
+    this.pauseOverlayMesh.userData = { w: 0, h: 0 };
+    this.overlayGroup.add(this.pauseOverlayMesh);
+    this.root.add(this.overlayGroup);
+
     this.composer = null;
 
     if (!lowQuality) this._initPostProcessing();
@@ -805,6 +821,20 @@ export class World3D {
     );
   }
 
+  _syncPauseOverlay(mode, w, h) {
+    const active = mode === "paused";
+    this.pauseOverlayMesh.visible = active;
+    if (!active) return;
+
+    this.pauseOverlayMesh.position.set(w * 0.5, h * 0.5, 5);
+    if (this.pauseOverlayMesh.userData.w !== w || this.pauseOverlayMesh.userData.h !== h) {
+      this.pauseOverlayMesh.geometry.dispose();
+      this.pauseOverlayMesh.geometry = new THREE.PlaneGeometry(w, h);
+      this.pauseOverlayMesh.userData.w = w;
+      this.pauseOverlayMesh.userData.h = h;
+    }
+  }
+
   _syncShockwave(timer, w, h) {
     if (!this.shockwaveMesh) return;
     if (timer <= 0) {
@@ -880,6 +910,7 @@ export class World3D {
     particles = [],
     bosses = [],
     shockwaveTimer = 0,
+    mode = "menu",
   }) {
     if (!this.enabled) return;
     if (w !== this.bounds.w || h !== this.bounds.h) this.resize(w, h);
@@ -897,6 +928,7 @@ export class World3D {
     this._syncBosses(bosses);
     if (ship) this._syncShip(ship);
     this._syncShockwave(shockwaveTimer, w, h);
+    this._syncPauseOverlay(mode, w, h);
 
     const shake = trauma * trauma * 3;
     const angle = rand(0, TAU);
