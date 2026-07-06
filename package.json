@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "smoke:explosive-pierce-restart": "node scripts/playwright_smoke_explosive_pierce_restart.mjs --url http://127.0.0.1:5173",
+    "cf:login": "npx wrangler whoami || npx wrangler login",
+    "deploy:cloudflare": "./scripts/deploy_cloudflare_pages.sh"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +15,7 @@
   "type": "commonjs",
   "dependencies": {
     "play-sound": "^1.1.6",
+    "playwright": "^1.61.0",
     "serve": "^14.2.5"
   }
 }

@@ -12,6 +12,11 @@ const restartBtn2 = document.querySelector("#restart-btn-2");
 const ui = {
   score: document.querySelector("#score"),
   combo: document.querySelector("#combo"),
+  highScore: document.querySelector("#high-score"),
+  menuHighScore: document.querySelector("#menu-high-score"),
+  gameoverBest: document.querySelector("#gameover-best"),
+  newRecord: document.querySelector("#new-record"),
+  hudBest: document.querySelector("#hud-best"),
   level: document.querySelector("#level"),
   lives: document.querySelector("#lives"),
   bombs: document.querySelector("#bombs"),
@@ -40,6 +45,7 @@ function resizeCanvas() {
 const game = new Game({ canvas, ui });
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
+game._syncHud();
 
 function syncOverlays() {
   if (game.mode === "menu") setHidden(overlay, false);
@@ -148,3 +154,5 @@ requestAnimationFrame(raf);
 
 window.render_game_to_text = () => game.getTextState();
 window.advanceTime = (ms) => game.advanceTime(ms);
+window.apply_smoke_fixture = (name) => game.applySmokeFixture(name);
+window.sync_smoke_overlays = () => syncOverlays();

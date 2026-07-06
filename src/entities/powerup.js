@@ -3,7 +3,7 @@ import { rand, TAU, wrapPosition } from "../util.js";
 export class PowerUp {
     constructor({ x, y, type }) {
         this.pos = { x, y };
-        this.type = type; // "spread" | "rapid" | "shield" | "bomb"
+        this.type = type; // "spread" | "rapid" | "shield" | "bomb" | "pierce"
         this.life = 10; // 10 seconds to collect
         this.r = 12;
         this.angle = rand(0, TAU);
@@ -41,6 +41,10 @@ export class PowerUp {
             color = "#ff4400"; // Neon red-orange
             glowColor = "rgba(255, 68, 0, 0.9)";
             label = "B";
+        } else if (this.type === "pierce") {
+            color = "#ffcc00"; // Neon yellow/gold
+            glowColor = "rgba(255, 204, 0, 0.9)";
+            label = "P";
         } else {
             color = "#00ccff"; // Neon cyan/blue
             glowColor = "rgba(0, 204, 255, 0.8)";

@@ -1,0 +1,26 @@
+{
+  "pierce_sequence": [
+    {
+      "name": "fire_pierce_round",
+      "buttons": ["left_mouse_button"],
+      "frames": 1,
+      "mouse_x_ratio": 0.95,
+      "mouse_y_ratio": 0.5
+    },
+    {
+      "name": "resolve_explosive_and_pierce_collisions",
+      "buttons": [],
+      "frames": 60
+    }
+  ],
+  "collision_sequence": [
+    {
+      "name": "tick_into_ship_collision",
+      "buttons": [],
+      "frames": 1
+    }
+  ],
+  "gameover_wait_frames": 90,
+  "restart_selector": "#restart-btn-2",
+  "post_restart_frames": 3
+}

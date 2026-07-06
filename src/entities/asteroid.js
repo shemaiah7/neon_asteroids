@@ -7,10 +7,11 @@ export function radiusForSize(size) {
 }
 
 export class Asteroid {
-  constructor({ x, y, vx, vy, size = 3, level = 1 }) {
+  constructor({ x, y, vx, vy, size = 3, level = 1, type = "normal" }) {
     this.pos = { x, y };
     this.vel = { x: vx, y: vy };
     this.size = size;
+    this.type = type;
     this.r = radiusForSize(size);
     this.rot = rand(0, TAU);
     this.rotSpeed = rand(0.35, 1.2) * randSign() * (0.7 + level * 0.06);
@@ -41,11 +42,17 @@ export class Asteroid {
     ctx.rotate(this.rot);
 
     ctx.globalCompositeOperation = "lighter";
-    ctx.shadowColor = "rgba(170,210,255,0.35)";
-    ctx.shadowBlur = 22;
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(150,210,255,0.55)";
-    ctx.fillStyle = "rgba(20,40,80,0.14)";
+    ctx.shadowBlur = 22;
+    if (this.type === "explosive") {
+      ctx.shadowColor = "rgba(255,100,30,0.6)";
+      ctx.strokeStyle = "rgba(255,80,30,0.8)";
+      ctx.fillStyle = "rgba(80,20,10,0.3)";
+    } else {
+      ctx.shadowColor = "rgba(170,210,255,0.35)";
+      ctx.strokeStyle = "rgba(150,210,255,0.55)";
+      ctx.fillStyle = "rgba(20,40,80,0.14)";
+    }
 
     ctx.beginPath();
     for (let i = 0; i < this.points.length; i++) {
@@ -63,4 +70,3 @@ export class Asteroid {
     ctx.restore();
   }
 }
-

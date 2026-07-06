@@ -153,6 +153,30 @@ button:focus-visible {
   align-items: flex-end;
 }
 
+.menu-best {
+  margin: 0 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: rgba(210, 120, 255, 0.95);
+  text-shadow: 0 0 12px rgba(210, 120, 255, 0.35);
+}
+
+.menu-best span {
+  font-weight: 700;
+}
+
+.hud-best.record-active span {
+  color: #ffe566;
+  text-shadow: 0 0 10px rgba(255, 229, 102, 0.55);
+}
+
+.record-badge {
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #ffe566;
+  text-shadow: 0 0 14px rgba(255, 229, 102, 0.45);
+}
+
 .hidden {
   display: none;
 }

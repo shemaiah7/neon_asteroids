@@ -10,3 +10,30 @@ TODO
 - Fine-tune difficulty curve and scoring.
 - Add/adjust sound effects (optional).
 - Add additional Playwright action scenarios (pause, restart, collisions).
+
+Updates (2026-06-15)
+- Added deterministic smoke harness: `scripts/playwright_smoke_explosive_pierce_restart.mjs`.
+- Added action fixture: `playwright_actions/smoke_explosive_pierce_restart.json`.
+- Added smoke hooks in runtime:
+  - `window.apply_smoke_fixture(name)`
+  - `window.sync_smoke_overlays()`
+  - Existing hooks retained: `window.render_game_to_text()`, `window.advanceTime(ms)`.
+- Extended text-state payload for regression assertions:
+  - ship weapon
+  - asteroid type
+  - bullet type/team
+  - combo
+- Implemented gameplay support needed for smoke coverage:
+  - explosive asteroid type (spawn + split chance + blast chain)
+  - pierce bullet type (powerup + shot behavior through targets)
+  - visual distinctions for explosive asteroids and pierce bullets
+  - initialized `ship.weapon` / `ship.weaponTimer` defaults.
+- Added npm script:
+  - `npm run smoke:explosive-pierce-restart`
+- Added Cloudflare deploy helper:
+  - `scripts/deploy_cloudflare_pages.sh`
+  - `npm run cf:login`
+  - `npm run deploy:cloudflare`
+- Validation run passed:
+  - output in `output/web-game-smoke-explosive-pierce-restart/`
+  - result file: `result.json`

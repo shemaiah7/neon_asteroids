@@ -1,14 +1,15 @@
 import { wrapPosition } from "../util.js";
 
 export class Bullet {
-  constructor({ x, y, vx, vy, team = "player" }) {
+  constructor({ x, y, vx, vy, team = "player", type = "normal" }) {
     this.pos = { x, y };
     this.vel = { x: vx, y: vy };
     this.team = team;
-    this.r = 2.2;
-    this.life = 1.15;
+    this.type = type;
+    this.r = type === "pierce" ? 4.5 : 2.2;
+    this.life = type === "pierce" ? 3.0 : 1.15;
     this.trail = [];
-    this.trailMax = 10;
+    this.trailMax = type === "pierce" ? 25 : 10;
   }
 
   update(dt, bounds) {
@@ -28,10 +29,15 @@ export class Bullet {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     const isEnemy = this.team === "enemy";
-    ctx.shadowColor = isEnemy ? "rgba(255, 100, 100, 0.95)" : "rgba(120,220,255,0.95)";
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = isEnemy ? "rgba(255, 150, 150, 0.85)" : "rgba(160,240,255,0.85)";
+    const isPierce = this.type === "pierce";
+    ctx.shadowColor = isEnemy
+      ? "rgba(255, 100, 100, 0.95)"
+      : (isPierce ? "rgba(255,180,50,0.95)" : "rgba(120,220,255,0.95)");
+    ctx.shadowBlur = isPierce ? 22 : 14;
+    ctx.lineWidth = isPierce ? 3.5 : 2;
+    ctx.strokeStyle = isEnemy
+      ? "rgba(255, 150, 150, 0.85)"
+      : (isPierce ? "rgba(255,200,100,0.95)" : "rgba(160,240,255,0.85)");
     ctx.beginPath();
     for (let i = 0; i < this.trail.length; i++) {
       const p = this.trail[i];
@@ -41,8 +47,10 @@ export class Bullet {
     ctx.lineTo(this.pos.x, this.pos.y);
     ctx.stroke();
 
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = isEnemy ? "rgba(255, 200, 200, 0.95)" : "rgba(220,250,255,0.95)";
+    ctx.shadowBlur = isPierce ? 28 : 18;
+    ctx.fillStyle = isEnemy
+      ? "rgba(255,200,200,0.95)"
+      : (isPierce ? "rgba(255,230,200,0.95)" : "rgba(220,250,255,0.95)");
     ctx.beginPath();
     ctx.arc(this.pos.x, this.pos.y, this.r, 0, Math.PI * 2);
     ctx.fill();

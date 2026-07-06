@@ -1,4 +1,18 @@
 import { AudioFx } from "./audio.js";
+import {
+  asteroidCount,
+  asteroidSpeedRange,
+  comboDecaySeconds,
+  enemySpawnDelay,
+  explosiveChance,
+  isBossLevel,
+  maxActiveEnemies,
+  pickEnemyPattern,
+  pincerWaveChance,
+  smallEnemyChance,
+  splitExplosiveChance,
+} from "./difficulty.js";
+import { getHighScore, isNewHighScore, saveHighScore } from "./highscore.js";
 import { InputManager } from "./input.js";
 import { Asteroid, radiusForSize } from "./entities/asteroid.js";
 import { Bullet } from "./entities/bullet.js";
@@ -81,6 +95,22 @@ export class Game {
 
     this.trauma = 0; // 0 to 1
     this.enemySpawnTimer = 0;
+
+    this.highScore = getHighScore();
+    this.sessionBest = this.highScore;
+    this.newRecord = false;
+  }
+
+  _bumpCombo() {
+    this.combo = Math.min(this.combo + 1, 99);
+    this.comboTimer = comboDecaySeconds(this.level);
+  }
+
+  _trackScore() {
+    if (isNewHighScore(this.score, this.sessionBest)) {
+      this.newRecord = true;
+      this.sessionBest = Math.floor(this.score);
+    }
   }
 
   addTrauma(amount) {
@@ -135,6 +165,8 @@ export class Game {
     this.audio.stopAllUfoHums();
     this.audio.stopThrust();
     this.enemySpawnTimer = 999; // No enemies until level 3
+    this.newRecord = false;
+    this.sessionBest = this.highScore;
     this.ship.respawn(this.bounds.w / 2, this.bounds.h / 2);
     this._spawnLevel();
     this._syncHud();
@@ -146,17 +178,18 @@ export class Game {
   }
 
   _spawnLevel() {
-    if (this.level > 0 && this.level % 5 === 0) {
+    if (isBossLevel(this.level)) {
       const p = this._randomSpawnPoint(200);
       this.bosses.push(new Boss({ x: p.x, y: p.y, level: this.level }));
     }
-    const count = (this.level % 5 === 0) ? 2 + Math.floor(this.level / 5) : 3 + this.level;
-    const minSpeed = 40 + this.level * 10;
-    const maxSpeed = 90 + this.level * 16;
+    const count = asteroidCount(this.level);
+    const { min: minSpeed, max: maxSpeed } = asteroidSpeedRange(this.level);
+    const explosiveRate = explosiveChance(this.level);
     for (let i = 0; i < count; i++) {
       const p = this._randomSpawnPoint(180);
       const a = rand(0, TAU);
       const sp = rand(minSpeed, maxSpeed);
+      const type = Math.random() < explosiveRate ? "explosive" : "normal";
       this.asteroids.push(
         new Asteroid({
           x: p.x,
@@ -165,6 +198,7 @@ export class Game {
           vy: Math.sin(a) * sp,
           size: 3,
           level: this.level,
+          type,
         }),
       );
     }
@@ -182,44 +216,60 @@ export class Game {
     return { x: rand(0, this.bounds.w), y: rand(0, this.bounds.h) };
   }
 
+  _spawnEnemyAtEdge(preferLeft) {
+    const fromLeft = preferLeft ?? Math.random() > 0.5;
+    const x = fromLeft ? 0 : this.bounds.w;
+    const y = rand(this.bounds.h * 0.1, this.bounds.h * 0.9);
+    return { x, y };
+  }
+
+  _spawnSingleEnemy({ type, pattern, x, y }) {
+    this.enemies.push(new Enemy({ x, y, type, pattern, level: this.level }));
+    this.audio.startUfoHum(type);
+  }
+
   _spawnEnemy(dt) {
-    // No UFOs until level 3
     if (this.level < 3) return;
 
-    // Cap active enemies — scales slowly: 1 until lvl 6, 2 until lvl 10, then 3
-    const maxEnemies = this.level < 6 ? 1 : this.level < 10 ? 2 : 3;
-    if (this.enemies.length >= maxEnemies) return;
+    const cap = maxActiveEnemies(this.level);
+    if (this.enemies.length >= cap) return;
 
     this.enemySpawnTimer -= dt;
     if (this.enemySpawnTimer <= 0) {
-      // Small (lethal) UFOs don't appear until level 7, and start rare
-      let isSmall = false;
-      if (this.level >= 7) {
-        // Chance ramps: lvl7=15%, lvl8=25%, lvl9=35%, lvl10+=50%
-        const smallChance = Math.min(0.5, 0.15 + (this.level - 7) * 0.10);
-        isSmall = Math.random() < smallChance;
-      }
+      const isSmall = Math.random() < smallEnemyChance(this.level);
       const type = isSmall ? "small" : "big";
+      const pattern = pickEnemyPattern(this.level, type);
 
-      const edge = Math.random() > 0.5 ? 0 : this.bounds.w;
-      const x = edge;
-      const y = rand(this.bounds.h * 0.1, this.bounds.h * 0.9);
+      const pincer = Math.random() < pincerWaveChance(this.level) && this.enemies.length + 2 <= cap;
+      if (pincer) {
+        const left = this._spawnEnemyAtEdge(true);
+        const right = this._spawnEnemyAtEdge(false);
+        const leftType = "big";
+        const rightType = Math.random() < 0.6 ? "small" : "big";
+        this._spawnSingleEnemy({
+          type: leftType,
+          pattern: pickEnemyPattern(this.level, leftType),
+          x: left.x,
+          y: left.y,
+        });
+        this._spawnSingleEnemy({
+          type: rightType,
+          pattern: pickEnemyPattern(this.level, rightType),
+          x: right.x,
+          y: right.y,
+        });
+      } else {
+        const p = this._spawnEnemyAtEdge();
+        this._spawnSingleEnemy({ type, pattern, x: p.x, y: p.y });
+      }
 
-      this.enemies.push(new Enemy({ x, y, type }));
-
-      // Very long intervals early on, gradually shorter
-      // Level 3: ~25-35s, Level 5: ~18-25s, Level 8: ~12-18s, Level 12+: ~8-12s
-      const baseInterval = rand(25, 35);
-      const speedup = 1 + (this.level - 3) * 0.12;
-      this.enemySpawnTimer = baseInterval / speedup;
-
-      // Start UFO hum for this enemy type
-      this.audio.startUfoHum(type);
+      this.enemySpawnTimer = enemySpawnDelay(this.level);
     }
   }
 
   _syncHud() {
     if (!this.ui) return;
+    this._trackScore();
     this.ui.score.textContent = String(this.score);
     if (this.ui.combo) this.ui.combo.textContent = this.combo > 1 ? this.combo + "x" : "";
     this.ui.level.textContent = String(this.level);
@@ -228,6 +278,18 @@ export class Game {
     this.ui.scheme.textContent = this.input.scheme;
     this.ui.padHint.textContent = this.input.gamepadName ? `Controller: ${this.input.gamepadName}` : "Controller: not connected";
     this.ui.mapping.textContent = this.input.getMappingText();
+
+    const best = Math.max(this.highScore, this.sessionBest);
+    if (this.ui.highScore) this.ui.highScore.textContent = String(best);
+    if (this.ui.menuHighScore) this.ui.menuHighScore.textContent = best > 0 ? String(best) : "—";
+    if (this.ui.gameoverBest) this.ui.gameoverBest.textContent = String(best);
+    if (this.ui.newRecord) {
+      const show = this.newRecord && this.mode === "gameover";
+      this.ui.newRecord.classList.toggle("hidden", !show);
+    }
+    if (this.ui.hudBest) {
+      this.ui.hudBest.classList.toggle("record-active", this.newRecord && this.mode === "playing");
+    }
   }
 
   updateOnce(dt) {
@@ -436,14 +498,19 @@ export class Game {
     const y = this.ship.pos.y + Math.sin(this.ship.angle) * muzzle;
     const speed = 780;
 
-    const fireBullet = (angleOffset = 0) => {
+    const fireBullet = (angleOffset = 0, type = "normal") => {
       const a = this.ship.angle + angleOffset;
       const vx = Math.cos(a) * speed + this.ship.vel.x;
       const vy = Math.sin(a) * speed + this.ship.vel.y;
-      this.bullets.push(new Bullet({ x, y, vx, vy, team: "player" }));
+      this.bullets.push(new Bullet({ x, y, vx, vy, team: "player", type }));
     };
 
-    fireBullet(0);
+    if (this.ship.weapon === "pierce") {
+      fireBullet(0, "pierce");
+      this.ship.shootCooldown = 0.25; // Heavy shot cadence
+    } else {
+      fireBullet(0);
+    }
 
     if (this.ship.weapon === "spread") {
       fireBullet(-0.15);
@@ -484,12 +551,12 @@ export class Game {
           const a = this.asteroids[ai];
           const rr = b.r + a.r;
           if (distSq(b.pos.x, b.pos.y, a.pos.x, a.pos.y) <= rr * rr) {
-            this.bullets.splice(bi, 1);
+            if (b.type !== "pierce") this.bullets.splice(bi, 1);
             this.asteroids.splice(ai, 1);
-            this._splitAsteroid(a);
+            if (a.type === "explosive") this._detonateExplosiveAsteroid(a);
+            else this._splitAsteroid(a);
             this.score += scoreForSize(a.size) * this.combo;
-            this.combo = Math.min(this.combo + 1, 99);
-            this.comboTimer = 3.0;
+            this._bumpCombo();
             this.audio.explosion({ size: a.size });
             this.input.rumble({ durationMs: 90, strong: 0.35, weak: 0.14 });
             this.addTrauma(0.25 + (a.size * 0.05));
@@ -508,13 +575,12 @@ export class Game {
               e.life--;
               if (e.life <= 0) {
                 this.score += e.scoreValue * this.combo;
-                this.combo = Math.min(this.combo + 1, 99);
-                this.comboTimer = 3.0;
+                this._bumpCombo();
                 this.enemies.splice(ei, 1);
                 // Drop PowerUp! (70% chance)
                 if (Math.random() < 0.7) {
                   const r = Math.random();
-                  const type = r < 0.15 ? "bomb" : r < 0.4 ? "shield" : r < 0.7 ? "spread" : "rapid";
+                  const type = r < 0.10 ? "bomb" : r < 0.25 ? "pierce" : r < 0.5 ? "shield" : r < 0.75 ? "spread" : "rapid";
                   this.powerups.push(new PowerUp({ x: e.pos.x, y: e.pos.y, type }));
                 }
                 this._explode({ x: e.pos.x, y: e.pos.y, baseColor: "rgba(255, 50, 100, 0.95)", count: 40, speed: 350 });
@@ -540,15 +606,14 @@ export class Game {
               this.audio.explosion({ size: 0.5 }); // hit sound
               if (boss.life <= 0) {
                 this.score += boss.scoreValue * this.combo;
-                this.combo = Math.min(this.combo + 1, 99);
-                this.comboTimer = 3.0;
+                this._bumpCombo();
                 this._explode({ x: boss.pos.x, y: boss.pos.y, baseColor: "rgba(255, 50, 150, 0.95)", count: 80, speed: 450 });
                 this.audio.explosion({ size: 3 });
                 this.addTrauma(1.0);
 
                 // Drop multiple powerups
-                for (let i = 0; i < 4; i++) {
-                  const types = ["bomb", "shield", "spread", "rapid"];
+                for (let i = 0; i < 5; i++) {
+                  const types = ["bomb", "shield", "spread", "rapid", "pierce"];
                   this.powerups.push(new PowerUp({ x: boss.pos.x + rand(-30, 30), y: boss.pos.y + rand(-30, 30), type: types[i] }));
                 }
               }
@@ -605,10 +670,10 @@ export class Game {
         const rr = shieldR + a.r * 0.85;
         if (distSq(this.ship.pos.x, this.ship.pos.y, a.pos.x, a.pos.y) <= rr * rr) {
           this.asteroids.splice(ai, 1);
-          this._splitAsteroid(a);
+          if (a.type === "explosive") this._detonateExplosiveAsteroid(a);
+          else this._splitAsteroid(a);
           this.score += scoreForSize(a.size) * this.combo;
-          this.combo = Math.min(this.combo + 1, 99);
-          this.comboTimer = 3.0;
+          this._bumpCombo();
           this.audio.explosion({ size: a.size });
           this.addTrauma(0.15);
         }
@@ -620,8 +685,7 @@ export class Game {
         const rr = shieldR + e.r * 0.85;
         if (distSq(this.ship.pos.x, this.ship.pos.y, e.pos.x, e.pos.y) <= rr * rr) {
           this.score += e.scoreValue * this.combo;
-          this.combo = Math.min(this.combo + 1, 99);
-          this.comboTimer = 3.0;
+          this._bumpCombo();
           this.enemies.splice(ei, 1);
           this._explode({ x: e.pos.x, y: e.pos.y, baseColor: "rgba(255, 50, 100, 0.95)", count: 40, speed: 350 });
           this.audio.ufoExplosion();
@@ -650,8 +714,7 @@ export class Game {
 
           if (boss.life <= 0) {
             this.score += boss.scoreValue * this.combo;
-            this.combo = Math.min(this.combo + 1, 99);
-            this.comboTimer = 3.0;
+            this._bumpCombo();
             this._explode({ x: boss.pos.x, y: boss.pos.y, baseColor: "rgba(255, 50, 150, 0.95)", count: 80, speed: 450 });
             this.audio.explosion({ size: 3 });
             this.addTrauma(1.0);
@@ -728,8 +791,7 @@ export class Game {
     // Destroy ALL asteroids
     for (const a of this.asteroids) {
       this.score += scoreForSize(a.size) * this.combo;
-      this.combo = Math.min(this.combo + 1, 99);
-      this.comboTimer = 3.0;
+      this._bumpCombo();
       this._explode({
         x: a.pos.x, y: a.pos.y,
         baseColor: "rgba(255, 120, 30, 0.95)",
@@ -742,8 +804,7 @@ export class Game {
     // Destroy ALL enemies
     for (const e of this.enemies) {
       this.score += e.scoreValue * this.combo;
-      this.combo = Math.min(this.combo + 1, 99);
-      this.comboTimer = 3.0;
+      this._bumpCombo();
       this._explode({
         x: e.pos.x, y: e.pos.y,
         baseColor: "rgba(255, 50, 100, 0.95)",
@@ -766,8 +827,7 @@ export class Game {
       });
       if (boss.life <= 0) {
         this.score += boss.scoreValue * this.combo;
-        this.combo = Math.min(this.combo + 1, 99);
-        this.comboTimer = 3.0;
+        this._bumpCombo();
         this._explode({ x: boss.pos.x, y: boss.pos.y, baseColor: "rgba(255, 50, 150, 0.95)", count: 80, speed: 450 });
       }
     }
@@ -793,6 +853,7 @@ export class Game {
     for (let i = 0; i < 2; i++) {
       const a = rand(0, TAU);
       const sp = rand(90, 170) * (1.0 + this.level * 0.05);
+      const type = Math.random() < splitExplosiveChance(this.level) ? "explosive" : "normal";
       this.asteroids.push(
         new Asteroid({
           x: x + Math.cos(a) * r * 0.25,
@@ -801,8 +862,61 @@ export class Game {
           vy: asteroid.vel.y * 0.4 + Math.sin(a) * sp,
           size: childSize,
           level: this.level,
+          type,
         }),
       );
+    }
+  }
+
+  _detonateExplosiveAsteroid(asteroid) {
+    const { x, y } = asteroid.pos;
+    const blastRadius = 220;
+
+    this._explode({ x, y, baseColor: "rgba(255, 120, 30, 0.95)", count: 50, speed: 450 });
+    this.addTrauma(0.5);
+    this.audio.explosion({ size: 3 });
+
+    const hitAsteroids = [];
+    for (let i = this.asteroids.length - 1; i >= 0; i--) {
+      const other = this.asteroids[i];
+      if (distSq(x, y, other.pos.x, other.pos.y) < blastRadius * blastRadius) {
+        hitAsteroids.push(other);
+        this.asteroids.splice(i, 1);
+      }
+    }
+
+    const hitEnemies = [];
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      if (distSq(x, y, e.pos.x, e.pos.y) < blastRadius * blastRadius) {
+        hitEnemies.push(e);
+        this.enemies.splice(i, 1);
+      }
+    }
+
+    for (const other of hitAsteroids) {
+      if (other.type === "explosive") this._detonateExplosiveAsteroid(other);
+      else this._splitAsteroid(other);
+      this.score += scoreForSize(other.size) * this.combo;
+      this._bumpCombo();
+    }
+
+    for (const e of hitEnemies) {
+      e.life = 0;
+      this.score += e.scoreValue * this.combo;
+      this._bumpCombo();
+      this._explode({ x: e.pos.x, y: e.pos.y, baseColor: "rgba(255, 50, 100, 0.95)", count: 40, speed: 350 });
+    }
+
+    if (!this.ship.dead && this.ship.invuln <= 0) {
+      if (distSq(x, y, this.ship.pos.x, this.ship.pos.y) < blastRadius * blastRadius) {
+        this.lives -= 1;
+        this.ship.kill();
+        this.audio.stopThrust();
+        this._explode({ x: this.ship.pos.x, y: this.ship.pos.y, baseColor: "rgba(210,120,255,0.95)", count: 40, speed: 440 });
+        this.audio.explosion({ size: 1.5 });
+        this.input.rumble({ durationMs: 200, strong: 1.0, weak: 0.8 });
+      }
     }
   }
 
@@ -810,6 +924,93 @@ export class Game {
     this.mode = "gameover";
     this.audio.stopAllUfoHums();
     this.audio.stopThrust();
+    if (saveHighScore(this.score)) {
+      this.highScore = Math.floor(this.score);
+      this.newRecord = true;
+    }
+    this._syncHud();
+  }
+
+  applySmokeFixture(name) {
+    const cy = Math.round(this.bounds.h * 0.5);
+    const clearWorld = () => {
+      this.asteroids.length = 0;
+      this.enemies.length = 0;
+      this.bosses.length = 0;
+      this.powerups.length = 0;
+      this.bullets.length = 0;
+      this.particles.length = 0;
+      this.audio.stopAllUfoHums();
+      this.audio.stopThrust();
+      this.mode = "playing";
+      this.enemySpawnTimer = 999;
+      this.shockwaveTimer = 0;
+      this.comboTimer = 0;
+      this.bombs = 0;
+    };
+
+    if (name === "smoke_explosive_pierce_lane") {
+      clearWorld();
+      this.level = 2;
+      this.score = 0;
+      this.combo = 1;
+      this.lives = 3;
+      this.ship.respawn(180, cy);
+      this.ship.invuln = 0;
+      this.ship.angle = 0;
+      this.ship.weapon = "pierce";
+      this.ship.weaponTimer = 15;
+      this.ship.shootCooldown = 0;
+      this.ship.vel.x = 0;
+      this.ship.vel.y = 0;
+
+      this.asteroids.push(
+        new Asteroid({ x: 420, y: cy, vx: 0, vy: 0, size: 1, level: this.level, type: "explosive" }),
+      );
+      this.asteroids.push(
+        new Asteroid({ x: 560, y: cy, vx: 0, vy: 0, size: 1, level: this.level, type: "normal" }),
+      );
+      this.asteroids.push(
+        new Asteroid({ x: 720, y: cy, vx: 0, vy: 0, size: 1, level: this.level, type: "normal" }),
+      );
+      this.asteroids.push(
+        new Asteroid({ x: 980, y: cy + 150, vx: 0, vy: 0, size: 1, level: this.level, type: "normal" }),
+      );
+      this._syncHud();
+      return true;
+    }
+
+    if (name === "smoke_collision_gameover") {
+      clearWorld();
+      this.level = 1;
+      this.score = 900;
+      this.combo = 1;
+      this.lives = 1;
+      this.ship.respawn(Math.round(this.bounds.w * 0.5), cy);
+      this.ship.invuln = 0;
+      this.ship.angle = 0;
+      this.ship.weapon = "normal";
+      this.ship.weaponTimer = 0;
+      this.ship.shootCooldown = 0;
+      this.ship.vel.x = 0;
+      this.ship.vel.y = 0;
+
+      this.asteroids.push(
+        new Asteroid({
+          x: this.ship.pos.x + 6,
+          y: this.ship.pos.y,
+          vx: 0,
+          vy: 0,
+          size: 1,
+          level: this.level,
+          type: "normal",
+        }),
+      );
+      this._syncHud();
+      return true;
+    }
+
+    return false;
   }
 
   tick(nowMs) {
@@ -891,10 +1092,24 @@ export class Game {
         angle: Number(this.ship.angle.toFixed(3)),
         invuln_s: Number(this.ship.invuln.toFixed(2)),
         dead: this.ship.dead,
+        weapon: this.ship.weapon || "normal",
       },
-      asteroids: this.asteroids.map((a) => ({ x: Math.round(a.pos.x), y: Math.round(a.pos.y), r: Math.round(a.r), size: a.size })),
-      bullets: this.bullets.map((b) => ({ x: Math.round(b.pos.x), y: Math.round(b.pos.y) })),
+      asteroids: this.asteroids.map((a) => ({
+        x: Math.round(a.pos.x),
+        y: Math.round(a.pos.y),
+        r: Math.round(a.r),
+        size: a.size,
+        type: a.type || "normal",
+      })),
+      bullets: this.bullets.map((b) => ({
+        x: Math.round(b.pos.x),
+        y: Math.round(b.pos.y),
+        type: b.type || "normal",
+        team: b.team || "player",
+      })),
       score: this.score,
+      highScore: Math.max(this.highScore, this.sessionBest),
+      combo: this.combo,
       lives: this.lives,
       level: this.level,
       input: { scheme: this.input.scheme, gamepad: this.input.gamepadName || null },

@@ -13,6 +13,8 @@ export class Ship {
     this.dead = false;
     this.respawnTimer = 0;
     this.teleportCooldown = 0;
+    this.weapon = "normal";
+    this.weaponTimer = 0;
   }
 
   respawn(x, y) {
@@ -25,6 +27,8 @@ export class Ship {
     this.respawnTimer = 0;
     this.shootCooldown = 0.15;
     this.teleportCooldown = 0;
+    this.weapon = "normal";
+    this.weaponTimer = 0;
   }
 
   teleport(x, y) {
