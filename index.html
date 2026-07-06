@@ -10,10 +10,19 @@
   <link rel="manifest" href="./manifest.json" />
   <title>Neon Asteroids</title>
   <link rel="stylesheet" href="./styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 
 <body>
   <main id="app">
+    <canvas id="bg-webgl" aria-hidden="true"></canvas>
     <canvas id="game" aria-label="Asteroids game"></canvas>
     <div id="overlay" class="overlay">
       <div class="panel">

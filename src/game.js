@@ -47,10 +47,12 @@ function neonBg(ctx, w, h, rOffset = 0) {
 }
 
 export class Game {
-  constructor({ canvas, ui }) {
+  constructor({ canvas, ui, webglBackground = false }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.ui = ui;
+    this.webglBackground = webglBackground;
+    this.background3d = null;
 
     // On touch/mobile devices, disable shadowBlur entirely for performance
     const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
@@ -87,7 +89,7 @@ export class Game {
     this.bullets = [];
     this.particles = [];
 
-    this._stars = this._makeStars();
+    if (!this.webglBackground) this._stars = this._makeStars();
 
     this._accum = 0;
     this._lastTime = 0;
@@ -117,6 +119,22 @@ export class Game {
     this.trauma = clamp(this.trauma + amount, 0, 1);
   }
 
+  attachBackground3d(background) {
+    this.background3d = background;
+    this.webglBackground = !!background?.enabled;
+    if (this.webglBackground) this._stars = null;
+  }
+
+  _backgroundState(dt) {
+    return {
+      w: this.bounds.w,
+      h: this.bounds.h,
+      trauma: this.trauma,
+      vel: this.ship.vel,
+      dt,
+    };
+  }
+
   resize(w, h) {
     this.bounds.w = w;
     this.bounds.h = h;
@@ -124,7 +142,8 @@ export class Game {
       this.ship.pos.x = w / 2;
       this.ship.pos.y = h / 2;
     }
-    this._stars = this._makeStars();
+    if (!this.webglBackground) this._stars = this._makeStars();
+    if (this.background3d?.enabled) this.background3d.resize(w, h);
   }
 
   _makeStars() {
@@ -1027,13 +1046,20 @@ export class Game {
       this._syncHud();
     }
 
-    this.render();
+    this._renderFrame(1 / 60);
   }
 
   advanceTime(ms) {
     const steps = Math.max(1, Math.round(ms / (1000 / 60)));
     for (let i = 0; i < steps; i++) {
       if (this.mode === "playing") this.updateOnce(FIXED_DT);
+    }
+    this._renderFrame(ms / 1000);
+  }
+
+  _renderFrame(dt) {
+    if (this.background3d?.enabled) {
+      this.background3d.render(this._backgroundState(dt));
     }
     this.render();
   }
@@ -1054,8 +1080,12 @@ export class Game {
     ctx.save();
     ctx.translate(sx, sy);
 
-    const bgShake = this.trauma * 3; // Reduced from 6
-    neonBg(ctx, w, h, bgShake);
+    if (!this.webglBackground) {
+      const bgShake = this.trauma * 3;
+      neonBg(ctx, w, h, bgShake);
+    } else {
+      ctx.clearRect(0, 0, w, h);
+    }
 
     // Chromatic Aberration removed for performance (was causing lag)
     /*
@@ -1118,14 +1148,16 @@ export class Game {
   }
 
   _drawWorld(ctx) {
-    for (const s of this._stars) {
-      ctx.globalAlpha = s.a;
-      ctx.fillStyle = "rgba(140,210,255,1)";
-      ctx.shadowColor = "rgba(80,200,255,0.6)";
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
+    if (this._stars) {
+      for (const s of this._stars) {
+        ctx.globalAlpha = s.a;
+        ctx.fillStyle = "rgba(140,210,255,1)";
+        ctx.shadowColor = "rgba(80,200,255,0.6)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     if (this.shockwaveTimer > 0) {

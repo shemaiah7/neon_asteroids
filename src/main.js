@@ -1,6 +1,8 @@
 import { Game } from "./game.js";
+import { Background3D } from "./renderer/background3d.js";
 
 const canvas = document.querySelector("#game");
+const bgCanvas = document.querySelector("#bg-webgl");
 const overlay = document.querySelector("#overlay");
 const pause = document.querySelector("#pause");
 const gameover = document.querySelector("#gameover");
@@ -37,12 +39,28 @@ const _isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 function resizeCanvas() {
   const dpr = _isTouchDevice ? 1 : Math.min(2, window.devicePixelRatio || 1);
   const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-  game.resize(canvas.width, canvas.height);
+  const w = Math.max(1, Math.floor(rect.width * dpr));
+  const h = Math.max(1, Math.floor(rect.height * dpr));
+  canvas.width = w;
+  canvas.height = h;
+  if (bgCanvas) {
+    bgCanvas.width = w;
+    bgCanvas.height = h;
+  }
+  game.resize(w, h);
 }
 
-const game = new Game({ canvas, ui });
+const background3d = bgCanvas
+  ? new Background3D({ canvas: bgCanvas, lowQuality: _isTouchDevice })
+  : null;
+
+const game = new Game({
+  canvas,
+  ui,
+  webglBackground: !!background3d?.enabled,
+});
+if (background3d?.enabled) game.attachBackground3d(background3d);
+
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 game._syncHud();
