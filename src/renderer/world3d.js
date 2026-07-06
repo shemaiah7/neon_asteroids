@@ -609,6 +609,19 @@ export class World3D {
     this.bossMeshes = [];
     this.shipGroup = createShipGroup();
     this.worldGroup.add(this.shipGroup);
+    this.shockwaveMesh = new THREE.Mesh(
+      new THREE.RingGeometry(0, 10, 72),
+      new THREE.MeshBasicMaterial({
+        color: 0xff781e,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    this.shockwaveMesh.visible = false;
+    this.worldGroup.add(this.shockwaveMesh);
     this.composer = null;
 
     if (!lowQuality) this._initPostProcessing();
@@ -778,6 +791,26 @@ export class World3D {
     );
   }
 
+  _syncShockwave(timer, w, h) {
+    if (!this.shockwaveMesh) return;
+    if (timer <= 0) {
+      this.shockwaveMesh.visible = false;
+      return;
+    }
+
+    this.shockwaveMesh.visible = true;
+    const progress = 1 - timer;
+    const radius = progress * Math.max(w, h);
+    const lineWidth = 30 * timer;
+    const inner = Math.max(0.001, radius - lineWidth * 0.5);
+    const outer = radius + lineWidth * 0.5;
+
+    this.shockwaveMesh.geometry.dispose();
+    this.shockwaveMesh.geometry = new THREE.RingGeometry(inner, outer, 72);
+    this.shockwaveMesh.position.set(w * 0.5, h * 0.5, 2.8);
+    this.shockwaveMesh.material.opacity = timer;
+  }
+
   _syncShip(ship) {
     const {
       hullFill,
@@ -832,6 +865,7 @@ export class World3D {
     enemies = [],
     particles = [],
     bosses = [],
+    shockwaveTimer = 0,
   }) {
     if (!this.enabled) return;
     if (w !== this.bounds.w || h !== this.bounds.h) this.resize(w, h);
@@ -848,6 +882,7 @@ export class World3D {
     this._syncParticles(particles);
     this._syncBosses(bosses);
     if (ship) this._syncShip(ship);
+    this._syncShockwave(shockwaveTimer, w, h);
 
     const shake = trauma * trauma * 3;
     const angle = rand(0, TAU);

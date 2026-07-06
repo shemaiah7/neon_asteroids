@@ -138,6 +138,7 @@ export class Game {
       enemies: this.enemies,
       particles: this.particles,
       bosses: this.bosses,
+      shockwaveTimer: this.shockwaveTimer,
     };
   }
 
@@ -1166,9 +1167,9 @@ export class Game {
       }
     }
 
-    if (this.shockwaveTimer > 0) {
+    if (!this.webglBackground && this.shockwaveTimer > 0) {
       ctx.save();
-      const progress = 1.0 - this.shockwaveTimer; // 0 to 1
+      const progress = 1.0 - this.shockwaveTimer;
       const radius = progress * Math.max(this.bounds.w, this.bounds.h);
       ctx.beginPath();
       ctx.arc(this.bounds.w / 2, this.bounds.h / 2, radius, 0, Math.PI * 2);
