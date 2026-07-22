@@ -14,7 +14,7 @@ export class InputManager {
     this.gamepadIndex = null;
     this.gamepadName = null;
     this.deadzone = DEFAULT_DEADZONE;
-    this._lastPauseButton = false;
+    this._lastGamepadButtons = {};
 
     // Touch joystick state
     this.touch = {
@@ -286,6 +286,10 @@ export class InputManager {
     const ay = pad.axes?.[1] ?? 0;
     const mag = hypot(ax, ay);
     const stickActive = mag > this.deadzone;
+    const rx = pad.axes?.[2] ?? 0;
+    const ry = pad.axes?.[3] ?? 0;
+    const rmag = hypot(rx, ry);
+    const rightStickActive = rmag > this.deadzone;
 
     const buttons = pad.buttons || [];
     const lt = buttons[6]?.value ?? 0;
@@ -293,35 +297,80 @@ export class InputManager {
     const a = !!buttons[0]?.pressed;
     const b = !!buttons[1]?.pressed;
     const x = !!buttons[2]?.pressed;
+    const y = !!buttons[3]?.pressed;
+    const lb = !!buttons[4]?.pressed;
+    const rb = !!buttons[5]?.pressed;
+    const back = !!buttons[8]?.pressed;
     const start = !!buttons[9]?.pressed;
+    const dpadUp = !!buttons[12]?.pressed;
+    const dpadDown = !!buttons[13]?.pressed;
+    const dpadLeft = !!buttons[14]?.pressed;
+    const dpadRight = !!buttons[15]?.pressed;
 
     const anyMeaningful =
-      stickActive || lt > 0.15 || rt > 0.15 || a || b || x || start || buttons.some((bt) => bt?.pressed);
+      stickActive || rightStickActive || lt > 0.15 || rt > 0.15 || a || b || x || y || lb || rb || back || start || buttons.some((bt) => bt?.pressed);
     if (anyMeaningful) this.lastGamepadAt = performance.now();
 
-    const pausePressed = start && !this._lastPauseButton;
-    this._lastPauseButton = start;
+    const pressed = (name, down) => {
+      const was = !!this._lastGamepadButtons[name];
+      this._lastGamepadButtons[name] = !!down;
+      return !!down && !was;
+    };
+    const aPressed = pressed("a", a);
+    const bPressed = pressed("b", b);
+    const xPressed = pressed("x", x);
+    const yPressed = pressed("y", y);
+    const lbPressed = pressed("lb", lb);
+    const rbPressed = pressed("rb", rb);
+    const backPressed = pressed("back", back);
+    const startPressed = pressed("start", start);
+    const confirmPressed = aPressed || startPressed;
 
     return {
       pad,
       ax,
       ay,
       stickActive,
+      rx,
+      ry,
+      rightStickActive,
       lt,
       rt,
       a,
       b,
       x,
-      pausePressed,
+      y,
+      lb,
+      rb,
+      back,
+      start,
+      dpadUp,
+      dpadDown,
+      dpadLeft,
+      dpadRight,
+      aPressed,
+      bPressed,
+      xPressed,
+      yPressed,
+      lbPressed,
+      rbPressed,
+      backPressed,
+      startPressed,
+      confirmPressed,
+      pausePressed: startPressed,
     };
   }
 
   getMappingText() {
     return [
-      "Left stick: aim direction",
-      "RT (button 7) or A/X (buttons 0/2): shoot",
+      "Left/right stick: aim direction",
+      "RT (button 7) or A (button 0): shoot",
       "LT (button 6) or B/Circle (button 1): thrust",
-      "Start (button 9): pause",
+      "X (button 2) or RB (button 5): bomb",
+      "Y (button 3): teleport",
+      "LB (button 4): hold shield",
+      "A/Start: menu confirm",
+      "Start (button 9): pause/resume",
       `Deadzone: ${this.deadzone.toFixed(2)}`,
     ].join("\n");
   }

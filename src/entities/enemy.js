@@ -20,7 +20,10 @@ export class Enemy {
         this.shootTimer = rand(1, 3);
         this.dirTimer = rand(2, 5);
         this.burstCooldown = 0;
-        this.life = 1;
+        const baseLife = type === "big" ? 4 : 2;
+        this.maxLife = baseLife + Math.floor(Math.max(0, level - 3) / 4);
+        this.life = this.maxLife;
+        this.flashTimer = 0;
         this.despawnTimer = rand(15, 30);
         this.leaving = false;
 
@@ -30,6 +33,7 @@ export class Enemy {
 
     update(dt, bounds, player, bulletsList) {
         this.animTime += dt;
+        if (this.flashTimer > 0) this.flashTimer -= dt;
 
         if (this.leaving) {
             this.pos.x += this.vel.x * dt * 2.5;
@@ -173,6 +177,27 @@ export class Enemy {
             this._drawSmallUFO(ctx, t, pulse, fastPulse);
         }
 
+        this._drawHealthBar(ctx);
+
+        ctx.restore();
+    }
+
+    _drawHealthBar(ctx) {
+        if (!this.maxLife || this.maxLife <= 1) return;
+        const hpPct = clamp(this.life / this.maxLife, 0, 1);
+        const barW = this.r * 2.15;
+        const barH = 4;
+        const y = this.r + 10;
+
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "rgba(80, 0, 0, 0.7)";
+        ctx.fillRect(-barW / 2, y, barW, barH);
+        ctx.fillStyle = hpPct > 0.45 ? "rgba(120, 255, 120, 0.95)" : "rgba(255, 120, 60, 0.95)";
+        ctx.fillRect(-barW / 2, y, barW * hpPct, barH);
+        ctx.strokeStyle = "rgba(255, 240, 220, 0.75)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-barW / 2, y, barW, barH);
         ctx.restore();
     }
 

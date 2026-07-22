@@ -192,7 +192,22 @@ async function main() {
       firedState.bullets.some((b) => b.type === "pierce"),
       "Pierce bullet should exist immediately after firing"
     );
-    await runSequence(page, box, actions.pierce_sequence.slice(1));
+
+    const resolveStep = actions.pierce_sequence[1];
+    assert.ok(resolveStep, "Actions file is missing explosive resolution step");
+    const blastFrames = Math.min(22, Math.max(1, Math.floor((resolveStep.frames || 1) * 0.36)));
+    await runStep(page, box, { ...resolveStep, frames: blastFrames });
+    const blastState = await readState(page, "phase1-blast", args.screenshotDir);
+    await capture(page, "phase1-blast", args.screenshotDir);
+    assert.ok(
+      (blastState.effects?.explosions ?? 0) > 0 || (blastState.effects?.particles ?? 0) > 0,
+      "Explosion visual effects should be active shortly after detonation",
+    );
+
+    const remainingResolveFrames = Math.max(0, (resolveStep.frames || 1) - blastFrames);
+    if (remainingResolveFrames > 0) {
+      await runStep(page, box, { ...resolveStep, frames: remainingResolveFrames });
+    }
     const resolvedState = await readState(page, "phase1-resolved", args.screenshotDir);
     await capture(page, "phase1-resolved", args.screenshotDir);
 

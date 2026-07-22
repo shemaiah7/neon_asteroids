@@ -6,6 +6,10 @@ export function isBossLevel(level) {
   return level > 0 && level % 5 === 0;
 }
 
+export function isSnakeBossLevel(level) {
+  return level > 0 && level % 10 === 0;
+}
+
 export function asteroidCount(level) {
   if (isBossLevel(level)) return clamp(3 + Math.floor(level / 10), 3, 6);
   // Gentle early game, soft cap so late levels stay playable

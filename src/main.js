@@ -22,6 +22,8 @@ const ui = {
   level: document.querySelector("#level"),
   lives: document.querySelector("#lives"),
   bombs: document.querySelector("#bombs"),
+  weapon: document.querySelector("#weapon"),
+  shield: document.querySelector("#shield"),
   scheme: document.querySelector("#scheme"),
   padHint: document.querySelector("#pad-hint"),
   mapping: document.querySelector("#mapping"),
@@ -112,6 +114,27 @@ function doRestart() {
 restartBtn.addEventListener("click", doRestart);
 restartBtn2.addEventListener("click", doRestart);
 
+function startFromController() {
+  setHidden(overlay, true);
+  game.start();
+  syncOverlays();
+}
+
+function handleGamepadOverlayControls() {
+  if (game.mode === "playing") return;
+  const gp = game.input.pollGamepad();
+  if (!gp) return;
+
+  if (game.mode === "menu" && gp.confirmPressed) {
+    startFromController();
+  } else if (game.mode === "paused" && (gp.confirmPressed || gp.pausePressed)) {
+    game.togglePause();
+    syncOverlays();
+  } else if (game.mode === "gameover" && gp.confirmPressed) {
+    doRestart();
+  }
+}
+
 function toggleFullscreen() {
   const el = document.documentElement;
   if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => { });
@@ -162,6 +185,7 @@ window.addEventListener("keyup", (e) => {
 
 function raf(now) {
   game.tick(now);
+  handleGamepadOverlayControls();
   syncOverlays();
   requestAnimationFrame(raf);
 }
@@ -169,5 +193,9 @@ requestAnimationFrame(raf);
 
 window.render_game_to_text = () => game.getTextState();
 window.advanceTime = (ms) => game.advanceTime(ms);
-window.apply_smoke_fixture = (name) => game.applySmokeFixture(name);
+window.apply_smoke_fixture = (name) => {
+  const applied = game.applySmokeFixture(name);
+  if (applied) game._renderFrame(1 / 60);
+  return applied;
+};
 window.sync_smoke_overlays = () => syncOverlays();

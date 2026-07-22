@@ -15,6 +15,10 @@ export class Ship {
     this.teleportCooldown = 0;
     this.weapon = "normal";
     this.weaponTimer = 0;
+    this.weaponLevels = { spread: 0, rapid: 0, pierce: 0 };
+    this.shieldEnergy = 1;
+    this.shieldActive = false;
+    this.shieldCooldown = 0;
   }
 
   respawn(x, y) {
@@ -29,6 +33,10 @@ export class Ship {
     this.teleportCooldown = 0;
     this.weapon = "normal";
     this.weaponTimer = 0;
+    this.weaponLevels = { spread: 0, rapid: 0, pierce: 0 };
+    this.shieldEnergy = 1;
+    this.shieldActive = false;
+    this.shieldCooldown = 0.15;
   }
 
   teleport(x, y) {
@@ -45,6 +53,24 @@ export class Ship {
   kill() {
     this.dead = true;
     this.respawnTimer = 1.15;
+    this.shieldActive = false;
+  }
+
+  setShieldHeld(held, dt) {
+    if (this.dead || this.shieldCooldown > 0 || this.shieldEnergy <= 0) {
+      this.shieldActive = false;
+      return false;
+    }
+
+    this.shieldActive = !!held;
+    if (this.shieldActive) {
+      this.shieldEnergy = Math.max(0, this.shieldEnergy - dt * 0.32);
+      if (this.shieldEnergy <= 0) {
+        this.shieldActive = false;
+        this.shieldCooldown = 1.15;
+      }
+    }
+    return this.shieldActive;
   }
 
   setFacingAngle(targetAngle, dt) {
@@ -61,6 +87,7 @@ export class Ship {
   update(dt, bounds, { thrustAmount, thrustPower, maxSpeed }) {
     if (this.dead) {
       this.respawnTimer -= dt;
+      this.shieldActive = false;
       return;
     }
 
@@ -90,6 +117,10 @@ export class Ship {
     this.shootCooldown = Math.max(0, this.shootCooldown - dt);
     this.invuln = Math.max(0, this.invuln - dt);
     this.teleportCooldown = Math.max(0, this.teleportCooldown - dt);
+    this.shieldCooldown = Math.max(0, this.shieldCooldown - dt);
+    if (!this.shieldActive && this.shieldCooldown <= 0) {
+      this.shieldEnergy = Math.min(1, this.shieldEnergy + dt * 0.18);
+    }
   }
 
   draw(ctx) {
@@ -137,38 +168,42 @@ export class Ship {
 
     ctx.restore();
 
-    // Draw pulsating shield when invulnerable (not respawn blink)
-    if (this.invuln > 1.0) {
+    // Draw pulsating shield when actively raised or shield pickup is running.
+    if (this.invuln > 1.0 || this.shieldActive) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       ctx.globalCompositeOperation = "lighter";
 
       const t = performance.now() / 1000;
       const pulse = 0.6 + Math.sin(t * 8) * 0.4;
-      const shieldR = this.r + 12 + Math.sin(t * 6) * 3;
+      const activePulse = this.shieldActive ? 7 : 3;
+      const shieldR = this.r + 12 + Math.sin(t * 6) * activePulse;
+      const shieldHue = this.shieldActive
+        ? { glow: "rgba(80, 220, 255,", stroke: "rgba(140, 245, 255,", fill: "rgba(80, 220, 255," }
+        : { glow: "rgba(255, 220, 0,", stroke: "rgba(255, 230, 50,", fill: "rgba(255, 220, 0," };
 
       // Outer glow ring
       ctx.beginPath();
       ctx.arc(0, 0, shieldR, 0, Math.PI * 2);
-      ctx.shadowColor = `rgba(255, 220, 0, ${pulse * 0.9})`;
-      ctx.shadowBlur = 25 + pulse * 15;
-      ctx.strokeStyle = `rgba(255, 230, 50, ${pulse * 0.8})`;
-      ctx.lineWidth = 2.5;
+      ctx.shadowColor = `${shieldHue.glow} ${pulse * 0.9})`;
+      ctx.shadowBlur = this.shieldActive ? 38 + pulse * 22 : 25 + pulse * 15;
+      ctx.strokeStyle = `${shieldHue.stroke} ${pulse * 0.86})`;
+      ctx.lineWidth = this.shieldActive ? 3.4 : 2.5;
       ctx.stroke();
 
       // Inner glow ring
       ctx.beginPath();
       ctx.arc(0, 0, shieldR - 3, 0, Math.PI * 2);
-      ctx.shadowColor = `rgba(255, 200, 50, ${pulse * 0.6})`;
+      ctx.shadowColor = `${shieldHue.glow} ${pulse * 0.62})`;
       ctx.shadowBlur = 15;
-      ctx.strokeStyle = `rgba(255, 240, 100, ${pulse * 0.5})`;
+      ctx.strokeStyle = `${shieldHue.stroke} ${pulse * 0.54})`;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       // Fill glow
       ctx.beginPath();
       ctx.arc(0, 0, shieldR, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 220, 0, ${pulse * 0.08})`;
+      ctx.fillStyle = `${shieldHue.fill} ${pulse * (this.shieldActive ? 0.14 : 0.08)})`;
       ctx.fill();
 
       ctx.restore();
