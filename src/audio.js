@@ -167,6 +167,11 @@ export class AudioFx {
     this._play('powerup', { volume: 0.8, pitch: 1.3 });
   }
 
+  extraLife() {
+    this._play('powerup', { volume: 0.9, pitch: 0.8 });
+    setTimeout(() => this._play('powerup', { volume: 0.9, pitch: 1.6 }), 90);
+  }
+
   // Thrust: looped while player holds thrust
   startThrust() {
     const ctx = this.ensure();

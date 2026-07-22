@@ -27,6 +27,7 @@ import { clamp, distSq, rand, TAU } from "./util.js";
 
 const FIXED_DT = 1 / 60;
 const WEAPON_TYPES = new Set(["spread", "rapid", "pierce"]);
+const EXTRA_LIFE_SCORE = 10000;
 
 function scoreForSize(size) {
   if (size === 3) return 20;
@@ -96,6 +97,7 @@ export class Game {
     this.bombFlashTimer = 0;
     this.lives = 3;
     this.bombs = 0;
+    this.nextLifeScore = EXTRA_LIFE_SCORE;
 
     this.input = new InputManager({ canvas });
     this.audio = new AudioFx();
@@ -164,6 +166,15 @@ export class Game {
   _bumpCombo() {
     this.combo = Math.min(this.combo + 1, 99);
     this.comboTimer = comboDecaySeconds(this.level);
+  }
+
+  _addScore(amount) {
+    this.score += amount;
+    while (this.score >= this.nextLifeScore) {
+      this.lives += 1;
+      this.nextLifeScore += EXTRA_LIFE_SCORE;
+      this.audio.extraLife();
+    }
   }
 
   _trackScore() {
@@ -246,6 +257,7 @@ export class Game {
     this.bombFlashTimer = 0;
     this.lives = 3;
     this.bombs = 0;
+    this.nextLifeScore = EXTRA_LIFE_SCORE;
     this.bullets.length = 0;
     this.particles.length = 0;
     this.explosions.length = 0;
@@ -770,7 +782,7 @@ export class Game {
             this.asteroids.splice(ai, 1);
             if (a.type === "explosive") this._detonateExplosiveAsteroid(a);
             else this._splitAsteroid(a);
-            this.score += scoreForSize(a.size) * this.combo;
+            this._addScore(scoreForSize(a.size) * this.combo);
             this._bumpCombo();
             this.audio.explosion({ size: a.size });
             this.input.rumble({ durationMs: 90, strong: 0.35, weak: 0.14 });
@@ -791,7 +803,7 @@ export class Game {
               this._spark({ x: b.pos.x, y: b.pos.y, baseColor: "rgba(255, 170, 80, 0.9)", count: 7, speed: 150 });
               this.audio.explosion({ size: 0.35 });
               if (e.life <= 0) {
-                this.score += e.scoreValue * this.combo;
+                this._addScore(e.scoreValue * this.combo);
                 this._bumpCombo();
                 this.enemies.splice(ei, 1);
                 // Drop PowerUp! (70% chance)
@@ -835,7 +847,7 @@ export class Game {
               });
               this.audio.explosion({ size: 0.5 }); // hit sound
               if (boss.life <= 0) {
-                this.score += boss.scoreValue * this.combo;
+                this._addScore(boss.scoreValue * this.combo);
                 this._bumpCombo();
                 this._explode({
                   x: boss.pos.x,
@@ -907,7 +919,7 @@ export class Game {
           this.asteroids.splice(ai, 1);
           if (a.type === "explosive") this._detonateExplosiveAsteroid(a);
           else this._splitAsteroid(a);
-          this.score += scoreForSize(a.size) * this.combo;
+          this._addScore(scoreForSize(a.size) * this.combo);
           this._bumpCombo();
           this.audio.explosion({ size: a.size });
           this.addTrauma(0.15);
@@ -919,7 +931,7 @@ export class Game {
         const e = this.enemies[ei];
         const rr = shieldR + e.r * 0.85;
         if (distSq(this.ship.pos.x, this.ship.pos.y, e.pos.x, e.pos.y) <= rr * rr) {
-          this.score += e.scoreValue * this.combo;
+          this._addScore(e.scoreValue * this.combo);
           this._bumpCombo();
           this.enemies.splice(ei, 1);
           this._explode({ x: e.pos.x, y: e.pos.y, baseColor: "rgba(255, 50, 100, 0.95)", count: 40, speed: 350 });
@@ -958,7 +970,7 @@ export class Game {
           this._explode({ x: this.ship.pos.x, y: this.ship.pos.y, baseColor: "rgba(100,200,255,0.8)", count: 2, speed: 100 });
 
           if (boss.life <= 0) {
-            this.score += boss.scoreValue * this.combo;
+            this._addScore(boss.scoreValue * this.combo);
             this._bumpCombo();
             this._explode({ x: boss.pos.x, y: boss.pos.y, baseColor: "rgba(255, 50, 150, 0.95)", count: 80, speed: 450 });
             this.audio.explosion({ size: 3 });
@@ -1047,7 +1059,7 @@ export class Game {
 
     // Destroy ALL asteroids
     for (const a of this.asteroids) {
-      this.score += scoreForSize(a.size) * this.combo;
+      this._addScore(scoreForSize(a.size) * this.combo);
       this._bumpCombo();
       this._explode({
         x: a.pos.x, y: a.pos.y,
@@ -1060,7 +1072,7 @@ export class Game {
 
     // Destroy ALL enemies
     for (const e of this.enemies) {
-      this.score += e.scoreValue * this.combo;
+      this._addScore(e.scoreValue * this.combo);
       this._bumpCombo();
       this._explode({
         x: e.pos.x, y: e.pos.y,
@@ -1083,7 +1095,7 @@ export class Game {
         speed: 540
       });
       if (boss.life <= 0) {
-        this.score += boss.scoreValue * this.combo;
+        this._addScore(boss.scoreValue * this.combo);
         this._bumpCombo();
         this._explode({ x: boss.pos.x, y: boss.pos.y, baseColor: "rgba(255, 50, 150, 0.95)", count: 80, speed: 450 });
       }
@@ -1154,13 +1166,13 @@ export class Game {
     for (const other of hitAsteroids) {
       if (other.type === "explosive") this._detonateExplosiveAsteroid(other);
       else this._splitAsteroid(other);
-      this.score += scoreForSize(other.size) * this.combo;
+      this._addScore(scoreForSize(other.size) * this.combo);
       this._bumpCombo();
     }
 
     for (const e of hitEnemies) {
       e.life = 0;
-      this.score += e.scoreValue * this.combo;
+      this._addScore(e.scoreValue * this.combo);
       this._bumpCombo();
       this._explode({ x: e.pos.x, y: e.pos.y, baseColor: "rgba(255, 50, 100, 0.95)", count: 40, speed: 350 });
     }
