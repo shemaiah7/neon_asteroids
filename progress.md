@@ -136,7 +136,8 @@ Updates (2026-07-18, bomb/shield/snake boss pass)
   - required web-game client against `http://127.0.0.1:5173`
   - screenshots inspected: `output/web-game-bomb-shield-snake/bomb-after.png`, `shield-after.png`, `snake-before.png`, `orb-destroyed.png`, `snake-after-hits.png`
 - Added extra-life mechanic (previously did not exist):
-  - bonus ship every 10,000 points (`EXTRA_LIFE_SCORE` in `src/game.js`), repeatable
+  - bonus ship every 50,000 points (`EXTRA_LIFE_SCORE` in `src/game.js`), repeatable
+    - raised from 10,000 after user feedback that combo-fueled scoring was granting free ships too often
   - centralized all score awards through new `Game._addScore()` instead of scattered `this.score +=`
   - `nextLifeScore` threshold resets alongside `score`/`lives` on `reset()`
   - added `AudioFx.extraLife()` cue (two-tone chime reusing the powerup sample)
