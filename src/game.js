@@ -582,17 +582,11 @@ export class Game {
       if (!activeTypes.has("small")) this.audio.stopUfoHum("small");
     }
 
-    if (this.asteroids.length === 0 && this.bosses.length === 0) {
+    if (this.asteroids.length === 0 && this.bosses.length === 0 && this.enemies.length === 0) {
       this.level += 1;
       // Set initial UFO spawn delay when reaching level 3
       if (this.level === 3) this.enemySpawnTimer = rand(20, 30);
 
-      // Wipe enemies out so the level resets cleanly
-      for (const e of this.enemies) {
-        this._explode({ x: e.pos.x, y: e.pos.y, baseColor: "rgba(255, 50, 100, 0.95)", count: 20, speed: 200 });
-      }
-      this.enemies = [];
-      this.audio.stopAllUfoHums();
       this.bullets = this.bullets.filter(b => !b.foe);
 
       this._spawnLevel();
