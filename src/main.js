@@ -1,5 +1,6 @@
 import { Game } from "./game.js";
 import { World3D } from "./renderer/world3d.js";
+import { VERSION } from "./version.js";
 
 const canvas = document.querySelector("#game");
 const bgCanvas = document.querySelector("#bg-webgl");
@@ -10,6 +11,8 @@ const startBtn = document.querySelector("#start-btn");
 const resumeBtn = document.querySelector("#resume-btn");
 const restartBtn = document.querySelector("#restart-btn");
 const restartBtn2 = document.querySelector("#restart-btn-2");
+const versionTag = document.querySelector("#version-tag");
+if (versionTag) versionTag.textContent = `Build ${VERSION}`;
 
 const ui = {
   score: document.querySelector("#score"),

@@ -22,6 +22,13 @@ rsync -av --delete \
   --exclude 'scripts/' \
   ./ "$DEPLOY_DIR/"
 
+BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)$(git diff --quiet 2>/dev/null || echo '-dirty')"
+BUILD_DATE="$(date +%Y-%m-%d)"
+echo "Stamping build $BUILD_ID ($BUILD_DATE) into $DEPLOY_DIR/src/version.js"
+cat > "$DEPLOY_DIR/src/version.js" <<VERSIONJS
+export const VERSION = "${BUILD_ID} (${BUILD_DATE})";
+VERSIONJS
+
 echo "Deploying to Cloudflare Pages project '$PROJECT_NAME' on branch '$BRANCH'..."
 npx wrangler pages deploy "$DEPLOY_DIR" --project-name "$PROJECT_NAME" --branch "$BRANCH"
 
