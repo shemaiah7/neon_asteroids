@@ -96,6 +96,7 @@ export class Game {
     this.shockwaveTimer = 0;
     this.bombFlashTimer = 0;
     this.lives = 3;
+    this._heartbeatTimer = 0;
     this.bombs = 0;
     this.nextLifeScore = EXTRA_LIFE_SCORE;
 
@@ -257,6 +258,7 @@ export class Game {
     this.shockwaveTimer = 0;
     this.bombFlashTimer = 0;
     this.lives = 3;
+    this._heartbeatTimer = 0;
     this.bombs = 0;
     this.nextLifeScore = EXTRA_LIFE_SCORE;
     this.bullets.length = 0;
@@ -463,12 +465,29 @@ export class Game {
 
     // Weapon Timer
     if (this.ship.weaponTimer > 0) {
+      const prevSecs = Math.ceil(this.ship.weaponTimer);
       this.ship.weaponTimer -= dt;
+      const nowSecs = Math.ceil(this.ship.weaponTimer);
+      // Warn on each of the final 3 seconds ticking down for weapon powerups
+      if (WEAPON_TYPES.has(this.ship.weapon) && this.ship.weaponTimer > 0 && nowSecs < prevSecs && nowSecs <= 3) {
+        this.audio.powerupWarn(nowSecs);
+      }
       if (this.ship.weaponTimer <= 0) {
         this.ship.weapon = "normal";
         this.ship.weaponTimer = 0;
         this.ui.lives.textContent = String(this.lives); // Reset UI text if it was shield
       }
+    }
+
+    // Low-life heartbeat: soft recurring thump while on the last life
+    if (!this.ship.dead && this.lives <= 1) {
+      this._heartbeatTimer -= dt;
+      if (this._heartbeatTimer <= 0) {
+        this.audio.heartbeat();
+        this._heartbeatTimer = 1.1;
+      }
+    } else {
+      this._heartbeatTimer = 0;
     }
 
     if (this.ship.dead && this.ship.respawnTimer <= 0 && this.lives <= 0) {
@@ -1048,6 +1067,7 @@ export class Game {
   }
 
   _detonateBomb() {
+    this.audio.bombBlast();
     this.shockwaveTimer = 1.0;
     this.bombFlashTimer = 0.42;
     this._explode({

@@ -227,6 +227,24 @@ export class AudioFx {
     this._tone({ freq: 660, endFreq: 170, type: "square", duration: 0.12, volume: 0.08 });
   }
 
+  // Bomb detonation: rising slam that leads into the screen-clearing blast
+  bombBlast() {
+    this._tone({ freq: 90, endFreq: 30, type: "sawtooth", duration: 0.5, volume: 0.26 });
+    this._tone({ freq: 180, endFreq: 1200, type: "square", duration: 0.16, volume: 0.13 });
+  }
+
+  // Powerup about to expire: warning beep, more urgent as time runs out (3/2/1s left)
+  powerupWarn(secondsLeft = 3) {
+    const freq = 520 + (3 - Math.max(1, Math.min(3, secondsLeft))) * 150;
+    this._tone({ freq, type: "triangle", duration: 0.1, volume: 0.1 });
+  }
+
+  // Low-life heartbeat: soft lub-dub thump while on the last life
+  heartbeat() {
+    this._tone({ freq: 70, endFreq: 45, type: "sine", duration: 0.12, volume: 0.22 });
+    this._tone({ freq: 60, endFreq: 40, type: "sine", duration: 0.14, volume: 0.17, delay: 0.17 });
+  }
+
   // Thrust: looped while player holds thrust
   startThrust() {
     const ctx = this.ensure();
