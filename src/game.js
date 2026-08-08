@@ -166,6 +166,7 @@ export class Game {
   _bumpCombo() {
     this.combo = Math.min(this.combo + 1, 99);
     this.comboTimer = comboDecaySeconds(this.level);
+    this.audio.combo(this.combo);
   }
 
   _addScore(amount) {
@@ -452,6 +453,7 @@ export class Game {
     const shieldActive = this.ship.setShieldHeld(shieldHeld, dt);
     if (shieldActive && !wasShieldActive) {
       this._spark({ x: this.ship.pos.x, y: this.ship.pos.y, baseColor: "rgba(80, 220, 255, 0.9)", count: 12, speed: 180 });
+      this.audio.shieldOn();
       this.input.rumble({ durationMs: 70, strong: 0.24, weak: 0.12 });
     }
 
@@ -515,6 +517,7 @@ export class Game {
               life: rand(0.3, 0.6), color: "rgba(210,120,255,0.8)"
             }));
           }
+          this.audio.teleport();
           this.input.rumble({ durationMs: 50, strong: 0.15, weak: 0.1 });
         }
       }
@@ -553,8 +556,11 @@ export class Game {
     }
 
     for (const a of this.asteroids) a.update(dt, this.bounds);
+    const enemyShotsBefore = this.bullets.reduce((n, b) => n + (b.team === "enemy" ? 1 : 0), 0);
     for (const e of this.enemies) e.update(dt, this.bounds, this.ship, this.bullets);
     for (const boss of this.bosses) boss.update(dt, this.bounds, this.ship, this.bullets);
+    const enemyShotsAfter = this.bullets.reduce((n, b) => n + (b.team === "enemy" ? 1 : 0), 0);
+    if (enemyShotsAfter > enemyShotsBefore) this.audio.enemyFire();
     for (const b of this.bullets) b.update(dt, this.bounds);
     for (const p of this.powerups) p.update(dt, this.bounds);
     for (const p of this.particles) p.update(dt, this.bounds);
@@ -591,6 +597,7 @@ export class Game {
 
       this._spawnLevel();
       // Level up audio cue
+      this.audio.levelUp();
       this.input.rumble({ durationMs: 70, strong: 0.25, weak: 0.08 });
     }
 

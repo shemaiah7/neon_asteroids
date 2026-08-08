@@ -172,6 +172,61 @@ export class AudioFx {
     setTimeout(() => this._play('powerup', { volume: 0.9, pitch: 1.6 }), 90);
   }
 
+  // --- Synthesized SFX (oscillator-based, no asset files needed) ---
+  _tone({ freq = 440, endFreq = null, type = "sine", duration = 0.15, volume = 0.2, attack = 0.005, delay = 0 } = {}) {
+    const ctx = this.ensure();
+    if (!ctx || !this.master) return;
+    if (ctx.state === "suspended") ctx.resume().catch(() => { });
+    try {
+      const t0 = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (endFreq && endFreq !== freq) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), t0 + duration);
+      }
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(volume, t0 + attack);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain);
+      gain.connect(this.master);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    } catch (e) { }
+  }
+
+  // Combo chain: rising blip that climbs a semitone per hit (gated to real chains)
+  combo(count = 2) {
+    if (count < 3) return;
+    const step = Math.min(count - 2, 24);
+    const base = 392 * Math.pow(2, step / 12); // semitone per combo above G4
+    this._tone({ freq: base, endFreq: base * 1.5, type: "square", duration: 0.09, volume: 0.11, attack: 0.003 });
+  }
+
+  // Shield engage: shimmering upward sweep
+  shieldOn() {
+    this._tone({ freq: 220, endFreq: 660, type: "sawtooth", duration: 0.25, volume: 0.12 });
+    this._tone({ freq: 330, endFreq: 990, type: "sine", duration: 0.3, volume: 0.09, delay: 0.02 });
+  }
+
+  // Teleport / hyperspace: quick downward warble
+  teleport() {
+    this._tone({ freq: 900, endFreq: 140, type: "sine", duration: 0.22, volume: 0.15 });
+    this._tone({ freq: 1400, endFreq: 200, type: "triangle", duration: 0.26, volume: 0.09, delay: 0.03 });
+  }
+
+  // Level cleared: short ascending arpeggio (C-E-G-C)
+  levelUp() {
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((f, i) => this._tone({ freq: f, type: "triangle", duration: 0.18, volume: 0.15, delay: i * 0.08 }));
+  }
+
+  // Enemy shot: short zappy descending square wave, distinct from player laser
+  enemyFire() {
+    this._tone({ freq: 660, endFreq: 170, type: "square", duration: 0.12, volume: 0.08 });
+  }
+
   // Thrust: looped while player holds thrust
   startThrust() {
     const ctx = this.ensure();
