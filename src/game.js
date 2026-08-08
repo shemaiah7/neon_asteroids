@@ -27,7 +27,7 @@ import { clamp, distSq, rand, TAU } from "./util.js";
 
 const FIXED_DT = 1 / 60;
 const WEAPON_TYPES = new Set(["spread", "rapid", "pierce"]);
-const EXTRA_LIFE_SCORE = 50000;
+const EXTRA_LIFE_SCORE = 100000;
 
 function scoreForSize(size) {
   if (size === 3) return 20;
